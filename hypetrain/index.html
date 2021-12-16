@@ -43,19 +43,24 @@ body {
 </body>
 <script>
 (async function() {
-    function parseHash() {
-        let paramsStr = window.location.hash.substring(1);
-        let params = {}
-        paramsStr.split('&').map(param => {
-            let kv = param.split('=');
-            params[kv[0]] = kv[1];
-        });
-        return params;
-    }
+    // function parseHash() {
+    //     let paramsStr = window.location.hash.substring(1);
+    //     let params = {}
+    //     paramsStr.split('&').map(param => {
+    //         let kv = param.split('=');
+    //         params[kv[0]] = kv[1];
+    //     });
+    //     return params;
+    // }
 
-    console.log("hash:", window.location.hash);
-    let params = parseHash();
-    console.log(params);
+    // console.log("hash:", window.location.hash);
+    // let params = parseHash();
+    // console.log(params);
+
+    const search = new URLSearchParams(window.location.search);
+    const s_channel = search.get("channel");
+    const s_width = search.get("width");
+    const s_height = search.get("height");
 
     //--------------------------------------------------------------------------------
     // Configuration options
@@ -69,12 +74,15 @@ body {
     let c = document.getElementById("canvas");
     let ctx = c.getContext("2d");
 
-    function canvasResize() {
-        c.width = window.innerWidth;
-        c.height = window.innerHeight;
-    };
-    canvasResize();
-    window.addEventListener('resize', canvasResize, false);
+    c.width = s_width ? s_width : 1920;
+    c.height = s_height ? s_height : 1080;
+
+    //function canvasResize() {
+    //    c.width = window.innerWidth;
+    //    c.height = window.innerHeight;
+    //};
+    //canvasResize();
+    //window.addEventListener('resize', canvasResize, false);
 
     let engine = new Image();
     let car1 = new Image();
@@ -367,7 +375,7 @@ body {
             socket.send("CAP REQ :twitch.tv/commands");
             socket.send("CAP REQ :twitch.tv/tags");
 
-            socket.send("JOIN #dandymcgee");
+            socket.send(`JOIN #${s_channel ? s_channel : "twitch"}`);
         };
         socket.onmessage = (msg) => {
             let raw_data = msg.data;
