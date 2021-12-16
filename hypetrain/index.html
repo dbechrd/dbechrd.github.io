@@ -145,7 +145,7 @@ body {
         }
     }
 
-    function nextCar() {
+    function nextCar(owner) {
         let car = {};
         car.dir = DIR_RIGHT;
         car.x = -train.carLength * 10;
@@ -177,23 +177,24 @@ body {
             car.image = carImages[rand(0, carImages.length - 1)];
             car.laps = lastCar.laps;
         }
+        car.owner = owner;
         return car;
     }
 
     // Initialize a train car
-    function spawnCar() {
+    function spawnCar(owner) {
         if (!train.cars.length) {
             // Create engine
             train.cars.push(nextCar());
         }
-        train.cars.push(nextCar());
+        train.cars.push(nextCar(owner));
         train.speed = Math.min(0.2 + 0.02 * train.cars.length, 2.0);
     }
 
-    function spawnCars(count) {
+    function spawnCars(owner, count) {
         let carsToSpawn = Math.max(0, Math.min(count, 1000));
         for (let i = 0; i < carsToSpawn; i++) {
-            spawnCar();
+            spawnCar(owner);
         }
         window.requestAnimationFrame(simulate);
     }
@@ -289,26 +290,64 @@ body {
             });
         } else {
             train.cars.forEach(car => {
-                let angleRad = Math.PI / 180;
+                let carAngle = 0;
                 let scale_x = 1;
+
+                const labelHeight = 26;
+                ctx.font = `${labelHeight}px serif`;
+                const labelWidth = ctx.measureText(car.owner).width;
+                const labelMargin = 10;
+                let labelOffset = {};
+                let labelAngle = 0;
+
+                const topLeft = {};
                 switch (car.dir) {
                     case DIR_RIGHT:
+                        topLeft.x = car.x;
+                        topLeft.y = car.y;
+                        labelOffset.x = topLeft.x + train.carLength / 2;
+                        labelOffset.y = topLeft.y + train.carWidth + labelMargin + labelHeight / 2;
+                        labelAngle = 30;
                         break;
                     case DIR_DOWN:
-                        angleRad *= 90;
+                        topLeft.x = car.x - train.carWidth;
+                        topLeft.y = car.y;
+                        labelOffset.x = topLeft.x - labelMargin - labelWidth;
+                        labelOffset.y = topLeft.y + train.carLength / 2 + labelHeight / 2;
+                        carAngle = 90;
                         break;
                     case DIR_LEFT:
+                        topLeft.x = car.x - train.carLength;
+                        topLeft.y = car.y;
+                        labelOffset.x = topLeft.x + train.carLength / 2;
+                        labelOffset.y = topLeft.y - labelMargin;
+                        labelAngle = -30;
                         scale_x = -1;
                         break;
                     case DIR_UP:
-                        angleRad *= 270;
+                        topLeft.x = car.x;
+                        topLeft.y = car.y - train.carLength;
+                        labelOffset.x = topLeft.x + train.carWidth + labelMargin;
+                        labelOffset.y = topLeft.y + train.carLength / 2 + labelHeight / 2;
+                        carAngle = 270;
                         break;
                 }
 
                 ctx.translate(car.x, car.y);
-                ctx.rotate(angleRad);
+                ctx.rotate(carAngle * Math.PI / 180);
                 ctx.scale(scale_x, 1);
                 ctx.drawImage(car.image, 0, 0, train.carLength, train.carWidth);
+
+                if (car.owner) {
+                    ctx.resetTransform();
+                    //ctx.fillStyle = 'green';
+                    //ctx.fillRect(topLeft.x, topLeft.y, 4, 4);
+                    ctx.fillStyle = 'black';
+                    //ctx.fillRect(labelOffset.x, labelOffset.y, 4, 4);
+                    ctx.translate(labelOffset.x, labelOffset.y);
+                    ctx.rotate(labelAngle * Math.PI / 180);
+                    ctx.fillText(car.owner, 0, 0);
+                }
                 ctx.resetTransform();
             });
         }
@@ -529,7 +568,7 @@ body {
                     payload.message = actionCheck[1];
                 }
 
-                //console.debug("Payload:", payload);
+                console.debug("Payload:", payload);
 
                 //--------------------------------
                 // https://tools.ietf.org/html/rfc1459
@@ -585,11 +624,11 @@ body {
                         // heres where the magic happens
                         if (payload.tags.bits) {
                             info(`${payload.tags.display_name} cheered ${payload.tags.bits} bits!`);
-                            spawnCars(Math.floor(payload.tags.bits / 500));
+                            spawnCars(payload.tags.display_name, Math.floor(payload.tags.bits / 500));
                         }
                         info(`${payload.tags.display_name}: ${payload.message}`);
                         if (payload.user === "dandymcgee" && payload.message.startsWith("train")) {
-                            spawnCars(parseInt(payload.message.substring(5)));
+                            spawnCars(payload.tags.display_name, parseInt(payload.message.substring(5)));
                         }
                         break;
                     case "WHISPER":
@@ -602,20 +641,20 @@ body {
                         // sub, resub, subgift, anonsubgift, submysterygift, giftpaidupgrade, rewardgift, anongiftpaidupgrade, raid, unraid, ritual, bitsbadgetier
                         switch (payload.tags.msg_id) {
                             case "sub":
-                                info(`${payload.tags.login} subscribed!`);
-                                spawnCars(1);
+                                info(`${payload.tags.display_name} subscribed!`);
+                                spawnCars(payload.tags.display_name, 1);
                                 break;
                             case "resub":
-                                info(`${payload.tags.login} resubscribed!`);
-                                spawnCars(1);
+                                info(`${payload.tags.display_name} resubscribed!`);
+                                spawnCars(payload.tags.display_name, 1);
                                 break;
                             case "subgift":
-                                info(`${payload.tags.login} gifted ${payload.tags.msg_param_recipient_display_name} a subscription!`);
-                                spawnCars(1);
+                                info(`${payload.tags.display_name} gifted ${payload.tags.msg_param_recipient_display_name} a subscription!`);
+                                spawnCars(payload.tags.display_name, 1);
                                 break;
                             case "anonsubgift":
                                 info(`Anonymous gifted ${payload.tags.msg_param_recipient_display_name} a subscription!`);
-                                spawnCars(1);
+                                spawnCars("Anonymous", 1);
                                 break;
                         }
                         break;
