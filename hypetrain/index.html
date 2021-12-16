@@ -578,7 +578,7 @@ body {
                         // heres where the magic happens
                         if (payload.tags.bits) {
                             console.log(`${payload.tags.display_name} cheered ${payload.tags.bits} bits!`);
-                            spawnCars(Math.floor(payload.tags.bits / 10));
+                            spawnCars(Math.floor(payload.tags.bits / 500));
                         }
                         console.log(`${payload.tags.display_name}: ${payload.message}`);
                         if (payload.user === "dandymcgee" && payload.message.startsWith("train")) {
@@ -596,15 +596,19 @@ body {
                         switch (payload.tags.msg_id) {
                             case "sub":
                                 console.log(`${payload.tags.login} subscribed!`);
+                                spawnCars(1);
                                 break;
                             case "resub":
                                 console.log(`${payload.tags.login} resubscribed!`);
+                                spawnCars(1);
                                 break;
                             case "subgift":
                                 console.log(`${payload.tags.login} gifted ${payload.tags.msg_param_recipient_display_name} a subscription!`);
+                                spawnCars(1);
                                 break;
                             case "anonsubgift":
                                 console.log(`Anonymous gifted ${payload.tags.msg_param_recipient_display_name} a subscription!`);
+                                spawnCars(1);
                                 break;
                         }
                         break;
