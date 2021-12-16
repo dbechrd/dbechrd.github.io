@@ -73,7 +73,8 @@ body {
     const OUTER_MARGIN        = 12;  // How far away from the edge of screen to render train
     const MAX_LAPS            = 50;  // Maximum number of laps a train can gain from new cars
     const CHAOS_MODE_CARS     = 100; // How many cars need to spawn to trigger chaos mode
-    const CHAOS_MODE_DURATION = 15 * 1000;  // 1 minutes
+    const CHAOS_MODE_DURATION = 20;  // How long chaos mode lasts
+    const CHAOS_MODE_FINALE   = 15;  // What time to start finale at (10 seconds)
     //--------------------------------------------------------------------------------
 
     let c = document.getElementById("canvas");
@@ -188,7 +189,7 @@ body {
             train.cars.push(nextCar());
         }
         train.cars.push(nextCar(owner));
-        train.speed = Math.min(0.2 + 0.02 * train.cars.length, 2.0);
+        train.speed = Math.min(0.1 + 0.01 * train.cars.length, 0.5);
     }
 
     function spawnCars(owner, count) {
@@ -267,25 +268,26 @@ body {
 
         let chaosTimeLeftSec;
         if (train.chaosModeStartedAt) {
-            const chaosDurationMs = Date.now() - train.chaosModeStartedAt;
-            if (chaosDurationMs > CHAOS_MODE_DURATION) {
+            const chaosDurationSec = (Date.now() - train.chaosModeStartedAt) / 1000;
+            if (chaosDurationSec > CHAOS_MODE_DURATION) {
                 train.carsToDespawn = train.cars.length;
             } else {
-                const chaosTimeLeftMs = (CHAOS_MODE_DURATION - chaosDurationMs) / 1000;
-                chaosTimeLeftSec = chaosTimeLeftMs > 10 ? chaosTimeLeftMs.toFixed(0) : chaosTimeLeftMs.toFixed(2);
+                chaosTimeLeftSec = (CHAOS_MODE_DURATION - chaosDurationSec).toFixed(0);
             }
         }
 
-        if (!chaosTimeLeftSec || chaosTimeLeftSec > 10) {
+        if (!chaosTimeLeftSec || chaosTimeLeftSec > CHAOS_MODE_FINALE) {
             let chaosTransform = ctx.getTransform();
             ctx.resetTransform();
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.setTransform(chaosTransform);
+        } else {
+            train.speed = 2.0;
         }
 
         if (train.chaosModeStartedAt) {
-            train.cars.slice(0, chaosTimeLeftSec < 10 ? 30 : 1000).forEach(car => {
-                ctx.rotate(rand(5, 30));
+            train.cars.slice(0, chaosTimeLeftSec <= CHAOS_MODE_FINALE ? 15 : 1000).forEach(car => {
+                ctx.rotate(90);
                 ctx.drawImage(car.image, car.x, car.y, train.carLength, train.carWidth);
             });
         } else {
@@ -293,8 +295,8 @@ body {
                 let carAngle = 0;
                 let scale_x = 1;
 
-                const labelHeight = 26;
-                ctx.font = `${labelHeight}px serif`;
+                const labelHeight = 22;
+                ctx.font = `bold ${labelHeight}px Helvetica`;
                 const labelWidth = ctx.measureText(car.owner).width;
                 const labelMargin = 10;
                 let labelOffset = {};
@@ -342,10 +344,15 @@ body {
                     ctx.resetTransform();
                     //ctx.fillStyle = 'green';
                     //ctx.fillRect(topLeft.x, topLeft.y, 4, 4);
-                    ctx.fillStyle = 'black';
+
+                    ctx.fillStyle = '#eeeeee';
                     //ctx.fillRect(labelOffset.x, labelOffset.y, 4, 4);
                     ctx.translate(labelOffset.x, labelOffset.y);
                     ctx.rotate(labelAngle * Math.PI / 180);
+                    ctx.shadowOffsetX = 2;
+                    ctx.shadowOffsetY = 2;
+                    ctx.shadowColor = "rgba(0,0,0,1)";
+                    ctx.shadowBlur = 1;
                     ctx.fillText(car.owner, 0, 0);
                 }
                 ctx.resetTransform();
@@ -354,18 +361,23 @@ body {
 
         // Don't let chaos mode go on forever.. hehe.
         if (train.chaosModeStartedAt) {
-            const chaosDurationMs = Date.now() - train.chaosModeStartedAt;
-            if (chaosDurationMs > CHAOS_MODE_DURATION) {
+            if (chaosTimeLeftSec <= 0) {
                 train.carsToDespawn = train.cars.length;
-            } else {
-                //const textHeight = 32;
-                //ctx.font = `${textHeight}px serif`;
-                //let chaosTransform = ctx.getTransform();
-                //ctx.resetTransform();
-                //const chaosTimerText = `~*!*~ Chaos Mode ~*!*~ ${chaosTimeLeftSec}`;
-                //const chaosTimerTextWidth = ctx.measureText(chaosTimerText).width;
-                //ctx.fillText(chaosTimerText, (canvas.width - chaosTimerTextWidth)/2, (canvas.height - textHeight)/2);
-                //ctx.setTransform(chaosTransform);
+            } else if (chaosTimeLeftSec > CHAOS_MODE_FINALE) {
+                const textHeight = 72;
+                ctx.font = `bold ${textHeight}px Helvetica`;
+                let chaosTransform = ctx.getTransform();
+                ctx.resetTransform();
+
+                const chaosTitleText = `~*!*~ Train Wreck ~*!*~`;
+                const chaosTitleTextWidth = ctx.measureText(chaosTitleText).width;
+                ctx.fillText(chaosTitleText, (canvas.width - chaosTitleTextWidth)/2, (canvas.height - textHeight)/2);
+
+                const chaosTimerText = (chaosTimeLeftSec - CHAOS_MODE_FINALE).toString();
+                const chaosTimerTextWidth = ctx.measureText(chaosTimerText).width;
+                ctx.fillText(chaosTimerText, (canvas.width - chaosTimerTextWidth)/2, (canvas.height - textHeight)/2 + textHeight);
+
+                ctx.setTransform(chaosTransform);
             }
         }
 
@@ -624,7 +636,7 @@ body {
                         // heres where the magic happens
                         if (payload.tags.bits) {
                             info(`${payload.tags.display_name} cheered ${payload.tags.bits} bits!`);
-                            spawnCars(payload.tags.display_name, Math.floor(payload.tags.bits / 500));
+                            spawnCars(payload.tags.display_name); //, Math.floor(payload.tags.bits / 500));
                         }
                         info(`${payload.tags.display_name}: ${payload.message}`);
                         if (payload.user === "dandymcgee" && payload.message.startsWith("train")) {
