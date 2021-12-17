@@ -116,7 +116,6 @@ body {
         train.carLength = 70;
         train.carWidth = 50;
         train.carsToDespawn = 0;
-        train.owners = new Set();
         train.cars = new Array();
         train.traveled = 0;
         train.doLaps = 1;
@@ -186,13 +185,13 @@ body {
 
     // Initialize a train car
     function spawnCar(owner) {
-        if (train.owners.has(owner)) {
-            return;
-        }
-        train.owners.add(owner);
         if (!train.cars.length) {
             // Create engine
             train.cars.push(nextCar("the_mess_express"));
+        }
+        if (owner == train.cars[train.cars.length - 1].owner) {
+            // Don't allow same person to get more than one car at a time
+            return;
         }
         train.cars.push(nextCar(owner));
         train.speed = Math.min(0.1 + 0.01 * train.cars.length, 0.5);
