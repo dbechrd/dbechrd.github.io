@@ -187,7 +187,7 @@ body {
     function spawnCar(owner) {
         if (!train.cars.length) {
             // Create engine
-            train.cars.push(nextCar("the_mess_express"));
+            train.cars.push(nextCar(s_channel + " Express"));
         }
         if (owner == train.cars[train.cars.length - 1].owner) {
             // Don't allow same person to get more than one car at a time
